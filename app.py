@@ -1,10 +1,12 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import joblib
 import numpy as np
 import pandas as pd
 from datetime import datetime
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all domains and routes
 
 # Load model, encoders, and matches data at startup
 model = joblib.load('ipl_model.pkl')
@@ -41,9 +43,10 @@ def get_last5_h2h_list(df, team1, team2, before_date):
     return result_list
 
 def get_team_recent_wins(df, team, before_date, n):
-    matches = get_last5_matches_list(df, team, before_date)
-    wins = sum(1 for res in matches if res.endswith('- W'))
-    return wins
+    matches = df[((df['team1'] == team) | (df['team2'] == team)) & (df['date'] < before_date)]
+    matches = matches.sort_values('date', ascending=False).head(n)
+    wins = (matches['winner'] == team).sum()
+    return int(wins)
 
 def get_team_ground_winrate(df, team, venue, before_date):
     mask = (((df['team1'] == team) | (df['team2'] == team)) & (df['venue'] == venue) & (df['date'] < before_date))
@@ -54,12 +57,12 @@ def get_team_ground_winrate(df, team, venue, before_date):
     return wins / len(matches)
 
 def get_h2h_wins(df, team, other_team, before_date, n):
-    matches = get_last5_h2h_list(df, team, other_team, before_date)
-    wins = sum(1 for m in matches if f"Winner: {team}" in m)
-    return wins
+    mask = (((df['team1'] == team) & (df['team2'] == other_team)) | ((df['team1'] == other_team) & (df['team2'] == team))) & (df['date'] < before_date)
+    matches = df[mask].sort_values('date', ascending=False).head(n)
+    wins = (matches['winner'] == team).sum()
+    return int(wins)
 
 def prepare_features(team1, team2, venue, match_date):
-    # Compute all features dynamically
     team1_last5_matches = get_last5_matches_list(matches_df, team1, match_date)
     team2_last5_matches = get_last5_matches_list(matches_df, team2, match_date)
     last_5_h2h_matches = get_last5_h2h_list(matches_df, team1, team2, match_date)
