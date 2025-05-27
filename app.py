@@ -74,6 +74,15 @@ def prepare_features(team1, team2, venue, match_date):
     team1_h2h_wins = get_h2h_wins(matches_df, team1, team2, match_date, 5)
     team2_h2h_wins = get_h2h_wins(matches_df, team2, team1, match_date, 5)
 
+    # Winner percentages
+    team1_recent_win_pct = (team1_recent_wins_5 / 5) * 100
+    team2_recent_win_pct = (team2_recent_wins_5 / 5) * 100
+    team1_h2h_win_pct = (team1_h2h_wins / 5) * 100
+    team2_h2h_win_pct = (team2_h2h_wins / 5) * 100
+    # Optionally, combine for a simple "confidence" score
+    team1_confidence = (team1_recent_win_pct + team1_h2h_win_pct) / 2
+    team2_confidence = (team2_recent_win_pct + team2_h2h_win_pct) / 2
+
     return {
         'team1': team1,
         'team2': team2,
@@ -86,7 +95,14 @@ def prepare_features(team1, team2, venue, match_date):
         'team2_h2h_wins': team2_h2h_wins,
         'team1_last5_matches': team1_last5_matches,
         'team2_last5_matches': team2_last5_matches,
-        'last_5_h2h_matches': last_5_h2h_matches
+        'last_5_h2h_matches': last_5_h2h_matches,
+        # Winner percentage stats
+        'team1_recent_win_pct': team1_recent_win_pct,
+        'team2_recent_win_pct': team2_recent_win_pct,
+        'team1_h2h_win_pct': team1_h2h_win_pct,
+        'team2_h2h_win_pct': team2_h2h_win_pct,
+        'team1_confidence': team1_confidence,
+        'team2_confidence': team2_confidence
     }
 
 def encode_features(row, encoders):
@@ -112,12 +128,18 @@ def predict():
     # Predict
     pred = model.predict(X_input)
     winner = target_encoder.inverse_transform(pred)[0]
-    # Return prediction and lists
+    # Return prediction, lists, and winner percentages
     response = {
         "predicted_winner": winner,
         "team1_last5_matches": features['team1_last5_matches'],
         "team2_last5_matches": features['team2_last5_matches'],
-        "last_5_h2h_matches": features['last_5_h2h_matches']
+        "last_5_h2h_matches": features['last_5_h2h_matches'],
+        "team1_recent_win_pct": features['team1_recent_win_pct'],
+        "team2_recent_win_pct": features['team2_recent_win_pct'],
+        "team1_h2h_win_pct": features['team1_h2h_win_pct'],
+        "team2_h2h_win_pct": features['team2_h2h_win_pct'],
+        "team1_confidence": features['team1_confidence'],
+        "team2_confidence": features['team2_confidence']
     }
     return jsonify(response)
 
